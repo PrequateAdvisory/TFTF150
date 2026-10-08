@@ -271,6 +271,7 @@ select.sel{appearance:none;background:var(--card) url("data:image/svg+xml,%3Csvg
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 #cb{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:90;max-width:640px;margin:0 auto;background:var(--card);color:var(--ink);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:16px 18px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}#cb p{margin:0;flex:1;min-width:220px;font-size:13px;color:var(--mute2)}#cb div{display:flex;gap:8px}#cb .btn{padding:8px 16px}
+#lead{position:fixed;inset:0;z-index:95;background:rgba(22,22,22,.7);display:grid;place-items:center;padding:18px}.lbox{position:relative;width:min(460px,100%);background:var(--card);color:var(--ink);border-radius:24px;padding:30px 28px 26px;box-shadow:0 30px 80px rgba(0,0,0,.4)}#lemail{width:100%;font:inherit;font-size:15px;padding:13px 16px;border-radius:14px;border:1.5px solid var(--line);background:var(--soft);color:var(--ink);margin-bottom:12px}#lemail:focus{border-color:var(--o2);outline:0}.lcons{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:var(--mute2);font-weight:300;margin-bottom:12px;cursor:pointer}.lcons input{accent-color:var(--o2);width:18px;height:18px;flex:none;margin-top:1px}.lerr{min-height:18px;font-size:12.5px;color:#B34A00;font-weight:600;margin-bottom:8px}
 /* strike */
 .stk{position:relative;display:inline-block}.stk i{position:absolute;left:-3%;right:-3%;top:52%;height:2px;background:#161616;display:block}
 /* PDF stage (always light, fixed canvas) */
@@ -368,6 +369,42 @@ const SEC=DATA.sectors.map(s=>{
 // rank by disclosed funding recomputed from the figures themselves
 [...SEC].sort((a,b)=>b.tot-a.tot).forEach((s,i)=>{s.rankN=i+1;});
 const BY=Object.fromEntries(SEC.map(s=>[s.id,s]));
+/* email gate for downloads. Inert unless a Google Apps Script URL is set */
+const LEAD_URL='https://script.google.com/macros/s/AKfycbxKh1OhQwPGZ36Q5bg6xWP8Oc9QEA7AvPutEEtz0aJgS_apQtSZPfEKX_iaXyGVBYL3Jw/exec';
+const LEAD_ON=/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(LEAD_URL);
+let leadOk=false;try{leadOk=localStorage.getItem('tftf_lead_ok')==='1'}catch(e){}
+function utmStr(){const q=new URLSearchParams(location.search);return ['utm_source','utm_medium','utm_campaign'].map(k=>q.get(k)||'').filter(Boolean).join(' | ')}
+function gate(action,cont){
+  if(!LEAD_ON||leadOk){cont();return}
+  closeLead();
+  const m=document.createElement('div');m.id='lead';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-label','Email to download');
+  m.innerHTML=`<div class="lbox"><button class="xbtn" data-lclose aria-label="Close" style="position:absolute;right:16px;top:16px">×</button>
+   <div class="eyebrow" style="margin-bottom:10px">One step before your download</div>
+   <h3 style="font-size:26px;margin-bottom:8px">Where should we <span class="serif accent">send updates?</span></h3>
+   <p style="margin:0 0 16px;font-size:13.5px;color:var(--mute2);font-weight:300">Enter your email to download. We use only your email, nothing else.</p>
+   <input id="lemail" type="email" inputmode="email" autocomplete="email" placeholder="you@company.com" aria-label="Email address">
+   <input id="lhp" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0">
+   <label class="lcons"><input type="checkbox" id="lcons"><span>I agree that Prequate Advisory may use this email to share The Fortnight Thus Far and related updates. I can ask to stop at any time.</span></label>
+   <div class="lerr" id="lerr" role="alert"></div>
+   <button class="btn btn-o" id="lgo" style="width:100%;justify-content:center;padding:13px">Continue to download</button></div>`;
+  document.body.appendChild(m);
+  const em=$('#lemail');em.focus();
+  const submit=()=>{
+    const v=em.value.trim().toLowerCase();
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(v)){$('#lerr').textContent='Please enter a valid email address.';em.focus();return}
+    if(!$('#lcons').checked){$('#lerr').textContent='Please tick the box to continue.';return}
+    const d={email:v,action,consent:true,hp:$('#lhp').value,page:location.origin+location.pathname,utm:utmStr(),
+      pages:action==='pdf'?pdfPlan().length:'',sectors:action==='pdf'&&st.pdf.cards?pdfCards().map(s=>s.short).join('; '):''};
+    try{fetch(LEAD_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(d)}).catch(()=>{})}catch(e){}
+    leadOk=true;try{localStorage.setItem('tftf_lead_ok','1')}catch(e){}
+    track('lead_submitted',{action});
+    closeLead();cont();
+  };
+  m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-lclose]'))closeLead();if(e.target.closest('#lgo'))submit()});
+  m.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='lemail'){e.preventDefault();submit()}if(e.key==='Escape')closeLead()});
+}
+function closeLead(){const m=$('#lead');if(m)m.remove()}
+
 const PROOF=Object.fromEntries(DATA.proof.map(p=>[p.num,p]));
 const checked=n=>!/^Tracxn only/.test(PROOF[n].check);
 const HEAT={1:'#F9E6D3',2:'#FDCB9C',3:'#FFB473',4:'#FA8420',5:'#F96900'};
@@ -734,6 +771,12 @@ function csv(){
   return '\ufeff'+[h.map(q).join(',')].concat(body).join('\n')+'\n\nSource: Tracxn India pulled 6 October 2026. Unverified against primary filings except where checked.';
 }
 
+async function doCsv(){
+  track('csv_export',{rows:sortedRows().length,filter:st.filter});
+  let dl=null;try{dl=await window.claude.use('downloads')}catch(x){}const data=csv();
+  if(dl){try{await dl.save({filename:'TFTF-150-sector-data.csv',data})}catch(x){}}
+  else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'text/csv'}));a.download='TFTF-150-sector-data.csv';a.click()}
+}
 /* events */
 document.addEventListener('click',async e=>{
   const T=e.target;
@@ -743,8 +786,7 @@ document.addEventListener('click',async e=>{
   if(el=T.closest('#chips .chip, .dr .chip')){toggleMine(+el.dataset.id,el.closest('.dr')?'pdf_panel':'overview');return}
   if(el=T.closest('[data-f]')){track('heatmap_filter',{filter:el.dataset.f});st.filter=el.dataset.f;rHeatmap();return}
   if(el=T.closest('[data-sort]')){track('heatmap_sort',{sort:el.dataset.sort});st.sort=el.dataset.sort;rHeatmap();return}
-  if(el=T.closest('#csvBtn')){track('csv_export',{rows:sortedRows().length,filter:st.filter});let dl=null;try{dl=await window.claude.use('downloads')}catch(x){}const data=csv();
-    if(dl){try{await dl.save({filename:'TFTF-150-sector-data.csv',data})}catch(x){}}else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'text/csv'}));a.download='TFTF-150-sector-data.csv';a.click()}return}
+  if(el=T.closest('#csvBtn')){gate('csv',doCsv);return}
   if(el=T.closest('[data-m]')){track('rank_metric',{metric:el.dataset.m});st.metric=el.dataset.m;rRank();return}
   if(el=T.closest('[data-pf]')){track('proof_filter',{filter:el.dataset.pf});st.proofF=el.dataset.pf;rMethod();return}
   if(el=T.closest('[data-nav]')){const n=BY[st.detail].num+ +el.dataset.nav;if(BY[n]){track('sector_open',{sector:BY[n].short,sector_num:n,source:'arrows'});st.detail=n;drawDetail();$('#ov').scrollTop=0}return}
@@ -754,7 +796,7 @@ document.addEventListener('click',async e=>{
   if(T.closest('[data-closedr]')||T===$('#scrim')){closeDrawer();return}
   if(el=T.closest('[data-q]')){const q=el.dataset.q;track('sector_quickselect',{group:q});mine=new Set(q==='all'?SEC.map(s=>s.id):q==='none'?[]:SEC.filter(s=>s.call===q).map(s=>s.id));saveMine();refresh();return}
   if(el=T.closest('[data-q2]')){const full=el.dataset.q2==='full';track('pdf_select',{mode:el.dataset.q2});Object.keys(st.pdf).forEach(k=>st.pdf[k]=false);if(full){Object.assign(st.pdf,{cover:true,note:true,heat:true,cards:true,method:true,proof:true,proofMine:false});mine=new Set(SEC.map(s=>s.id));saveMine()}refresh();return}
-  if(T.closest('#makePdf')){makePdf();return}
+  if(T.closest('#makePdf')){gate('pdf',makePdf);return}
 });
 document.addEventListener('change',e=>{
   const T=e.target;
