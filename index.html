@@ -270,7 +270,7 @@ select.sel{appearance:none;background:var(--card) url("data:image/svg+xml,%3Csvg
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
-#cb{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:90;max-width:640px;margin:0 auto;background:var(--card);color:var(--ink);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:16px 18px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}#cb p{margin:0;flex:1;min-width:220px;font-size:13px;color:var(--mute2)}#cb div{display:flex;gap:8px}#cb .btn{padding:8px 16px}
+#cb{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:90;max-width:640px;margin:0 auto;background:var(--card);color:var(--ink);border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:16px 18px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}#cb p{margin:0;flex:1;min-width:220px;font-size:13.5px;line-height:1.5;color:var(--mute2)}#cb p b{color:var(--ink)}#cb div{display:flex;gap:8px}#cb .btn{padding:8px 16px}
 #lead{position:fixed;inset:0;z-index:95;background:rgba(22,22,22,.7);display:grid;place-items:center;padding:18px}.lbox{position:relative;width:min(460px,100%);background:var(--card);color:var(--ink);border-radius:24px;padding:30px 28px 26px;box-shadow:0 30px 80px rgba(0,0,0,.4)}#lemail{width:100%;font:inherit;font-size:15px;padding:13px 16px;border-radius:14px;border:1.5px solid var(--line);background:var(--soft);color:var(--ink);margin-bottom:12px}#lemail:focus{border-color:var(--o2);outline:0}.lcons{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:var(--mute2);font-weight:300;margin-bottom:12px;cursor:pointer}.lcons input{accent-color:var(--o2);width:18px;height:18px;flex:none;margin-top:1px}.lerr{min-height:18px;font-size:12.5px;color:#B34A00;font-weight:600;margin-bottom:8px}
 /* strike */
 .stk{position:relative;display:inline-block}.stk i{position:absolute;left:-3%;right:-3%;top:52%;height:2px;background:#161616;display:block}
@@ -334,23 +334,32 @@ const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelect
 const GA_ID='G-7P1S1VNYKM';
 const GA_ON=/^G-[A-Z0-9]{6,}$/.test(GA_ID)&&GA_ID!==('G-'+'X'.repeat(10));
 window.dataLayer=window.dataLayer||[];function gtag(){window.dataLayer.push(arguments)}
-const track=(n,p)=>{try{if(GA_ON)gtag('event',n,p||{})}catch(e){}};
+const LEAD_URL='https://script.google.com/macros/s/AKfycbxKh1OhQwPGZ36Q5bg6xWP8Oc9QEA7AvPutEEtz0aJgS_apQtSZPfEKX_iaXyGVBYL3Jw/exec';
+const LEAD_ON=/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(LEAD_URL);
+const LOGQ=[];try{const q=JSON.parse(localStorage.getItem('tftf_q')||'[]');if(Array.isArray(q))LOGQ.push(...q.slice(-400))}catch(e){}
+let leadEmail='',vid='',logOK=false,declined=false;
+try{leadEmail=localStorage.getItem('tftf_lead_email')||'';vid=localStorage.getItem('tftf_vid')||'';const cs=localStorage.getItem('tftf_consent2')||'';logOK=cs==='granted'||!!leadEmail;declined=cs==='denied'&&!leadEmail}catch(e){}
+const track=(n,p)=>{try{if(GA_ON)gtag('event',n,p||{})}catch(e){}try{logEv(n,p)}catch(e){}try{aggEv(n,p)}catch(e){}};
 const srcOf=el=>el.closest('.hm')?'heatmap':el.closest('.rank')?'rank':el.closest('.minegrid')?'my_sectors':el.closest('.glance')?'glance':el.closest('.calls')?'calls_list':'other';
 (function(){
-  if(!GA_ON)return;
-  let c='';try{c=localStorage.getItem('tftf_consent')||''}catch(e){}
-  gtag('consent','default',{analytics_storage:c==='granted'?'granted':'denied',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied'});
-  gtag('js',new Date());
-  const cfg={allow_google_signals:false,allow_ad_personalization_signals:false};
-  if(/ga_debug/.test(location.search))cfg.debug_mode=true;
-  gtag('config',GA_ID,cfg);
-  const s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+GA_ID;document.head.appendChild(s);
-  if(!c){
+  let c='';try{c=localStorage.getItem('tftf_consent2')||''}catch(e){}
+  if(GA_ON){
+    gtag('consent','default',{analytics_storage:c==='granted'?'granted':'denied',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied'});
+    gtag('js',new Date());
+    const cfg={allow_google_signals:false,allow_ad_personalization_signals:false};
+    if(/ga_debug/.test(location.search))cfg.debug_mode=true;
+    gtag('config',GA_ID,cfg);
+    const s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id='+GA_ID;document.head.appendChild(s);
+  }
+  if((GA_ON||LEAD_ON)&&!c){
     const b=document.createElement('div');b.id='cb';b.setAttribute('role','region');b.setAttribute('aria-label','Analytics notice');
-    b.innerHTML='<p>We use Google Analytics to count visits and see which sections are opened. No names or email addresses are collected.</p><div><button class="btn btn-o" data-cons="granted">Accept</button><button class="btn btn-line" data-cons="denied">Decline</button></div>';
+    b.innerHTML='<p><b>Your choice on tracking.</b> This helps us show you the sectors that matter to you. If you accept, we log which sections you open against a random ID in this browser, and link it to your email if you download later. If you decline, everything still works and we count only anonymous totals.</p><div><button class="btn btn-line" data-cons="granted">Accept</button><button class="btn btn-line" data-cons="denied">Decline</button></div>';
     document.body.appendChild(b);
-    b.addEventListener('click',e=>{const k=e.target.closest('[data-cons]');if(!k)return;const v=k.dataset.cons;try{localStorage.setItem('tftf_consent',v)}catch(x){}
-      if(v==='granted')gtag('consent','update',{analytics_storage:'granted'});b.remove()});
+    b.addEventListener('click',e=>{const k=e.target.closest('[data-cons]');if(!k)return;const v=k.dataset.cons;try{localStorage.setItem('tftf_consent2',v)}catch(x){}
+      aggEv('consent_choice',{option:v});
+      if(GA_ON&&v==='granted')gtag('consent','update',{analytics_storage:'granted'});
+      if(LEAD_ON){if(v==='granted'){logOK=true;ensureVid();flush()}else{declined=true;LOGQ.length=0;try{localStorage.removeItem('tftf_q')}catch(x){}}}
+      b.remove()});
   }
 })();
 
@@ -369,22 +378,47 @@ const SEC=DATA.sectors.map(s=>{
 // rank by disclosed funding recomputed from the figures themselves
 [...SEC].sort((a,b)=>b.tot-a.tot).forEach((s,i)=>{s.rankN=i+1;});
 const BY=Object.fromEntries(SEC.map(s=>[s.id,s]));
-/* email gate for downloads. Inert unless a Google Apps Script URL is set */
-const LEAD_URL='https://script.google.com/macros/s/AKfycbxKh1OhQwPGZ36Q5bg6xWP8Oc9QEA7AvPutEEtz0aJgS_apQtSZPfEKX_iaXyGVBYL3Jw/exec';
-const LEAD_ON=/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(LEAD_URL);
-let leadOk=false;try{leadOk=localStorage.getItem('tftf_lead_ok')==='1'}catch(e){}
+/* email gate and activity log. Inert unless a Google Apps Script URL is set */
+/* anonymous aggregate counts: no ID, no email, nothing stored on the device. Sent for everyone, whatever they chose on the notice */
+const AGG=new Map();let aggT=null;
+function aggEv(n,p){
+  if(!LEAD_ON||n==='lead_submitted')return;p=p||{};
+  const d=String(p.sector||p.tab||p.filter||p.sort||p.metric||p.cta||p.option||p.mode||p.group||'').slice(0,80);
+  const s=String(p.source||p.where||'').slice(0,40);
+  const k=n+'|'+d+'|'+s;const o=AGG.get(k)||{e:n,d,s,n:0};o.n++;AGG.set(k,o);
+  if(!aggT)aggT=setTimeout(flushAgg,15000);
+}
+function flushAgg(){aggT=null;if(!AGG.size)return;const items=[...AGG.values()];AGG.clear();for(let i=0;i<items.length;i+=150)postLead({type:'agg',items:items.slice(i,i+150)})}
+function ensureVid(){if(!vid){const r=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Math.random()).slice(2)+Date.now();vid='V-'+r.replace(/-/g,'').slice(0,12);try{localStorage.setItem('tftf_vid',vid)}catch(e){}}return vid}
+function logEv(n,p){
+  if(!LEAD_ON||n==='lead_submitted'||declined)return;
+  LOGQ.push({t:new Date().toISOString(),e:n,p:p||{}});if(LOGQ.length>400)LOGQ.shift();
+  if(logOK)schedFlush();else{try{localStorage.setItem('tftf_q',JSON.stringify(LOGQ))}catch(e){}}
+}
+let flushT=null;
+function schedFlush(){if(flushT)return;flushT=setTimeout(flush,8000)}
+function flush(){flushT=null;if(!logOK||!LOGQ.length)return;ensureVid();const ev=LOGQ.splice(0,LOGQ.length);try{localStorage.removeItem('tftf_q')}catch(e){}for(let i=0;i<ev.length;i+=300)postLead({type:'events',vid,email:leadEmail,events:ev.slice(i,i+300)})}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){flush();flushAgg()}});
+window.addEventListener('pagehide',()=>{flush();flushAgg()});
+function postLead(d){try{fetch(LEAD_URL,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(d)}).catch(()=>{})}catch(e){}}
 function utmStr(){const q=new URLSearchParams(location.search);return ['utm_source','utm_medium','utm_campaign'].map(k=>q.get(k)||'').filter(Boolean).join(' | ')}
+function dlRecord(action,email){
+  const inc=Object.keys(st.pdf).filter(k=>st.pdf[k]&&!/Mine$/.test(k)).join(', ');
+  return {type:'download',vid:ensureVid(),email,action,consent:true,page:location.origin+location.pathname,utm:utmStr(),
+    pages:action==='pdf'?pdfPlan().length:'',sectors:action==='pdf'&&st.pdf.cards?pdfCards().map(s=>s.short).join('; '):'',includes:action==='pdf'?inc:''};
+}
 function gate(action,cont){
-  if(!LEAD_ON||leadOk){cont();return}
+  if(!LEAD_ON){cont();return}
+  if(leadEmail){postLead(dlRecord(action,leadEmail));flush();cont();return}
   closeLead();
   const m=document.createElement('div');m.id='lead';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-label','Email to download');
   m.innerHTML=`<div class="lbox"><button class="xbtn" data-lclose aria-label="Close" style="position:absolute;right:16px;top:16px">×</button>
    <div class="eyebrow" style="margin-bottom:10px">One step before your download</div>
    <h3 style="font-size:26px;margin-bottom:8px">Where should we <span class="serif accent">send updates?</span></h3>
-   <p style="margin:0 0 16px;font-size:13.5px;color:var(--mute2);font-weight:300">Enter your email to download. We use only your email, nothing else.</p>
+   <p style="margin:0 0 16px;font-size:13.5px;color:var(--mute2);font-weight:300">Enter your email to download. We store your email and which parts of this dashboard you open.</p>
    <input id="lemail" type="email" inputmode="email" autocomplete="email" placeholder="you@company.com" aria-label="Email address">
    <input id="lhp" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0">
-   <label class="lcons"><input type="checkbox" id="lcons"><span>I agree that Prequate Advisory may use this email to share The Fortnight Thus Far and related updates. I can ask to stop at any time.</span></label>
+   <label class="lcons"><input type="checkbox" id="lcons"><span>I agree that Prequate Advisory may use this email to share The Fortnight Thus Far and related updates, and may see which parts of this dashboard I open. I can ask to stop at any time.</span></label>
    <div class="lerr" id="lerr" role="alert"></div>
    <button class="btn btn-o" id="lgo" style="width:100%;justify-content:center;padding:13px">Continue to download</button></div>`;
   document.body.appendChild(m);
@@ -393,11 +427,10 @@ function gate(action,cont){
     const v=em.value.trim().toLowerCase();
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(v)){$('#lerr').textContent='Please enter a valid email address.';em.focus();return}
     if(!$('#lcons').checked){$('#lerr').textContent='Please tick the box to continue.';return}
-    const d={email:v,action,consent:true,hp:$('#lhp').value,page:location.origin+location.pathname,utm:utmStr(),
-      pages:action==='pdf'?pdfPlan().length:'',sectors:action==='pdf'&&st.pdf.cards?pdfCards().map(s=>s.short).join('; '):''};
-    try{fetch(LEAD_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(d)}).catch(()=>{})}catch(e){}
-    leadOk=true;try{localStorage.setItem('tftf_lead_ok','1')}catch(e){}
+    if($('#lhp').value){closeLead();return}
+    leadEmail=v;logOK=true;declined=false;ensureVid();try{localStorage.setItem('tftf_lead_email',v)}catch(e){}
     track('lead_submitted',{action});
+    postLead(dlRecord(action,v));flush();
     closeLead();cont();
   };
   m.addEventListener('click',e=>{if(e.target===m||e.target.closest('[data-lclose]'))closeLead();if(e.target.closest('#lgo'))submit()});
@@ -814,6 +847,7 @@ document.addEventListener('keydown',e=>{
   }
   if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('srow')){e.preventDefault();openDetail(+e.target.dataset.open,'heatmap')}
 });
+aggEv('visit',{source:(new URLSearchParams(location.search).get('utm_source')||'direct')});
 go('overview');$('#pdfCount').textContent=pdfPageCount();
 </script>
 </body>
